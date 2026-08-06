@@ -346,12 +346,15 @@ input[type=range]{width:120px;accent-color:var(--accent);background:transparent}
 (function(){
 'use strict';
 
-/* ====== audio file names (差し替えたい場合はここだけ変更) ====== */
+/* ====== 音源ファイル ======
+   各トラックは「先に見つかった方」を使う。同梱の .m4a より、
+   自分で置いた .mp3 が優先される（差し替えたいだけなら mp3 を置くだけでよい）。 */
+function src(name){ return ['assets/audio/'+name+'.mp3', 'assets/audio/'+name+'.m4a']; }
 var AUDIO = {
-  bgm:['assets/audio/bgm1.mp3','assets/audio/bgm2.mp3','assets/audio/bgm3.mp3','assets/audio/bgm4.mp3'],
-  damage:'assets/audio/damage.mp3',
-  coin:'assets/audio/coin.mp3',
-  dice:'assets/audio/dice.mp3'
+  bgm:[src('bgm1'), src('bgm2'), src('bgm3'), src('bgm4')],
+  damage:src('damage'),
+  coin:src('coin'),
+  dice:src('dice')
 };
 
 var LS = 'ygolife.';
@@ -400,11 +403,16 @@ var Audio_ = {
     AUDIO.bgm.forEach(function(src,i){ self.els[i] = self.make(src,true); });
     ['damage','coin','dice'].forEach(function(k){ self.se[k] = self.make(AUDIO[k],false); });
   },
-  make:function(src,loop){
-    var a = new Audio();
-    a.preload='auto'; a.loop=!!loop; a.src=src;
-    a.dataset.ok='1';
-    a.addEventListener('error', function(){ a.dataset.ok='0'; });
+  /* 候補を順に試し、全部だめなら ok=0（＝その音は鳴らさない） */
+  make:function(list,loop){
+    var a = new Audio(), i = 0;
+    a.preload='auto'; a.loop=!!loop; a.dataset.ok='1';
+    a.addEventListener('error', function(){
+      i++;
+      if(i < list.length){ a.src = list[i]; a.load(); }
+      else { a.dataset.ok='0'; }
+    });
+    a.src = list[0];
     return a;
   },
   ok:function(a){ return a && a.dataset.ok!=='0'; },
