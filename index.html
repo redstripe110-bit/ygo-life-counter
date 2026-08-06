@@ -43,7 +43,8 @@ button{border:0;background:none;padding:0;cursor:pointer;touch-action:manipulati
       font-size:12px;color:var(--dim);background:var(--panel2)}
 .hbtn:active{transform:scale(.94)}
 .hbtn[disabled]{opacity:.32}
-.hbtn .ic{font-size:15px;line-height:1}
+.ic{width:19px;height:19px;display:block;flex:0 0 auto}
+#sprite{display:none}
 #hdr .spacer{flex:1}
 #audioHint{font-size:11px;color:var(--warn);padding:0 6px;white-space:nowrap}
 #audioHint[hidden]{display:none}
@@ -51,14 +52,21 @@ button{border:0;background:none;padding:0;cursor:pointer;touch-action:manipulati
 /* ---------- board ---------- */
 #board{flex:1;display:flex;flex-direction:column;min-height:0}
 .player{position:relative;flex:1;display:flex;flex-direction:column;
-        align-items:center;justify-content:center;min-height:0;
-        background:var(--panel);overflow:hidden}
-.player+.player{border-top:3px solid var(--line)}
-.player::before{content:"";position:absolute;inset:0;border:3px solid transparent;
-        pointer-events:none;transition:border-color .3s}
-.player[data-band="mid"]::before{border-color:rgba(255,176,32,.55)}
-.player[data-band="low"]::before{border-color:rgba(255,77,94,.7)}
-.player.active::before{border-color:var(--accent)}
+        align-items:center;justify-content:center;min-height:0;overflow:hidden}
+/* プレイヤー1は濃紺、プレイヤー2は濃赤のグラデーション */
+.player[data-p="1"]{background:linear-gradient(160deg,#102654 0%,#0a1433 48%,#050a1a 100%)}
+.player[data-p="2"]{background:linear-gradient(160deg,#54101b 0%,#330a11 48%,#190508 100%)}
+.player+.player{border-top:3px solid #000}
+/* 中央にうっすら光を置いて数字を浮かせる */
+.player::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+        background:radial-gradient(ellipse 70% 45% at 50% 46%,rgba(255,255,255,.075),transparent 70%)}
+.player::before{content:"";position:absolute;inset:0;z-index:2;border:3px solid transparent;
+        pointer-events:none;transition:border-color .3s,box-shadow .3s}
+.player[data-band="mid"]::before{border-color:rgba(255,186,60,.75);
+        box-shadow:inset 0 0 44px rgba(255,176,32,.14)}
+.player[data-band="low"]::before{border-color:rgba(255,120,140,.95);
+        box-shadow:inset 0 0 56px rgba(255,60,85,.2)}
+.player.active::before{border-color:var(--accent);box-shadow:inset 0 0 44px rgba(78,161,255,.16)}
 
 .pname,.lifewrap,.logbtn,.tapmark{position:relative;z-index:1}
 .pname{font-size:13px;letter-spacing:.14em;color:var(--dim);
@@ -69,10 +77,19 @@ button{border:0;background:none;padding:0;cursor:pointer;touch-action:manipulati
        border:1px solid var(--accent);border-radius:8px;padding:6px 10px;width:60%;outline:none}
 
 .lifewrap{position:relative;display:flex;align-items:center;justify-content:center;
-          padding:2px 16px}
-.life{font-size:clamp(64px,17vw,132px);font-weight:800;line-height:1;
-      font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-.life.z{color:var(--dmg)}
+          padding:2px 12px}
+/* ライフは7セグメント風の自前表示（外部フォントを使わずデジタル感を出す） */
+.life{display:flex;align-items:center;justify-content:center;gap:.12em;color:#eaf1ff}
+.life .dg{height:clamp(70px,19.5vw,146px);width:auto;display:block}
+.sg{fill:currentColor;opacity:.055;transition:opacity .06s linear}
+.sg.on{opacity:1}
+.player[data-p="1"] .life{filter:drop-shadow(0 0 12px rgba(96,166,255,.5))}
+.player[data-p="2"] .life{filter:drop-shadow(0 0 12px rgba(255,108,124,.5))}
+.life.z{color:#ff6b7f}
+.life.low{animation:lcdpulse 1.15s ease-in-out infinite}
+@keyframes lcdpulse{0%,100%{opacity:1}50%{opacity:.55}}
+#calcLife .dg{height:38px}
+#calcLife{display:flex;gap:.1em;color:#eaf1ff;filter:drop-shadow(0 0 8px rgba(78,161,255,.45))}
 /* ダメージ表示はライフ数字とプレイヤー名の上（空きスペース）に浮かせる */
 .poplayer{position:absolute;left:50%;top:-46px;width:0;height:0;pointer-events:none;z-index:2}
 .pop{position:absolute;left:0;top:0;transform:translate(-50%,0);
@@ -119,7 +136,6 @@ button{border:0;background:none;padding:0;cursor:pointer;touch-action:manipulati
 #calcHead{display:flex;align-items:center;gap:10px;padding:6px 16px 10px;border-bottom:1px solid var(--line)}
 #calcName{font-size:12px;letter-spacing:.12em;color:var(--accent);flex:0 0 auto;
           max-width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#calcLife{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
 #calcBuf{flex:1;text-align:right;font-size:26px;font-weight:700;
          font-variant-numeric:tabular-nums;color:var(--dim);min-height:30px}
 #calcBuf.has{color:var(--txt)}
@@ -190,7 +206,7 @@ input[type=range]{width:120px;accent-color:var(--accent);background:transparent}
 .acccard{height:104px;border-radius:14px;background:var(--panel2);display:flex;
          flex-direction:column;align-items:center;justify-content:center;gap:8px;font-size:13px}
 .acccard:active{transform:scale(.97)}
-.acccard .em{font-size:34px}
+.acccard .em{width:34px;height:34px;color:var(--accent)}
 #accStage{text-align:center;padding:12px 0 4px}
 #accResult{font-size:76px;font-weight:800;line-height:1.05;min-height:92px;
            display:flex;align-items:center;justify-content:center}
@@ -205,16 +221,70 @@ input[type=range]{width:120px;accent-color:var(--accent);background:transparent}
 </style>
 </head>
 <body>
+
+<!-- アイコン（絵文字ではなく自前のSVG。currentColor で色が付く） -->
+<svg id="sprite" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="ic-gear" viewBox="0 0 24 24">
+    <path fill="currentColor" fill-rule="evenodd" d="M18.58 9.61 L21.74 9.75 L21.74 14.25
+      L18.58 14.39 L18.34 14.96 L20.48 17.30 L17.30 20.48 L14.96 18.34 L14.39 18.58
+      L14.25 21.74 L9.75 21.74 L9.61 18.58 L9.04 18.34 L6.70 20.48 L3.52 17.30
+      L5.66 14.96 L5.42 14.39 L2.26 14.25 L2.26 9.75 L5.42 9.61 L5.66 9.04
+      L3.52 6.70 L6.70 3.52 L9.04 5.66 L9.61 5.42 L9.75 2.26 L14.25 2.26
+      L14.39 5.42 L14.96 5.66 L17.30 3.52 L20.48 6.70 L18.34 9.04 Z
+      M8.80 12 a3.20 3.20 0 1 0 6.40 0 a3.20 3.20 0 1 0 -6.40 0 Z"/>
+  </symbol>
+  <symbol id="ic-dice" viewBox="0 0 24 24">
+    <rect x="3.4" y="3.4" width="17.2" height="17.2" rx="4.6"
+          fill="none" stroke="currentColor" stroke-width="2"/>
+    <g fill="currentColor">
+      <circle cx="8.4" cy="8.4" r="1.65"/><circle cx="15.6" cy="8.4" r="1.65"/>
+      <circle cx="12" cy="12" r="1.65"/>
+      <circle cx="8.4" cy="15.6" r="1.65"/><circle cx="15.6" cy="15.6" r="1.65"/>
+    </g>
+  </symbol>
+  <symbol id="ic-sound-on" viewBox="0 0 24 24">
+    <path d="M4 9.3h3.3L12 5v14l-4.7-4.3H4z" fill="currentColor"/>
+    <path d="M15.4 9.4a3.9 3.9 0 0 1 0 5.2M18.1 6.9a7.6 7.6 0 0 1 0 10.2"
+          fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="ic-sound-off" viewBox="0 0 24 24">
+    <path d="M4 9.3h3.3L12 5v14l-4.7-4.3H4z" fill="currentColor"/>
+    <path d="M15.6 9.4l5 5.2M20.6 9.4l-5 5.2"
+          fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="ic-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8.8 5.4L4.6 9.6l4.2 4.2"/>
+    <path d="M4.6 9.6h9.1a5.4 5.4 0 1 1 0 10.8h-3.1"/>
+  </symbol>
+  <symbol id="ic-reset" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4.4 12a7.6 7.6 0 1 0 2.3-5.4"/>
+    <path d="M4.2 4.4v4.7h4.7"/>
+  </symbol>
+  <symbol id="ic-coin" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round">
+    <circle cx="12" cy="12" r="8.6"/>
+    <path d="M12 6.6v10.8" stroke-width="1.7"/>
+    <path d="M14.7 9.3c-.8-1-5-1.3-5 1 0 2.2 5 1.1 5 3.4 0 2.4-4.2 2-5 1"
+          stroke-width="1.7"/>
+  </symbol>
+  <symbol id="ic-close" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2.2" stroke-linecap="round">
+    <path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>
+  </symbol>
+</svg>
+
 <div id="app">
 
   <header id="hdr">
-    <button class="hbtn" id="btnSettings" aria-label="設定"><span class="ic">⚙</span></button>
-    <button class="hbtn" id="btnAcc" aria-label="アクセサリ"><span class="ic">🎲</span></button>
+    <button class="hbtn" id="btnSettings" aria-label="設定"><svg class="ic"><use href="#ic-gear"/></svg></button>
+    <button class="hbtn" id="btnAcc" aria-label="アクセサリ"><svg class="ic"><use href="#ic-dice"/></svg></button>
     <span class="spacer"></span>
-    <span id="audioHint">🔇 タップで音声ON</span>
-    <button class="hbtn" id="btnMute" aria-label="ミュート切替"><span class="ic">🔊</span></button>
-    <button class="hbtn" id="btnUndo" aria-label="一つ前に戻る" disabled><span class="ic">↩</span></button>
-    <button class="hbtn" id="btnReset" aria-label="リセット"><span class="ic">⟳</span></button>
+    <span id="audioHint">タップで音声ON</span>
+    <button class="hbtn" id="btnMute" aria-label="ミュート切替"><svg class="ic" id="icMute"><use href="#ic-sound-on"/></svg></button>
+    <button class="hbtn" id="btnUndo" aria-label="一つ前に戻る" disabled><svg class="ic"><use href="#ic-undo"/></svg></button>
+    <button class="hbtn" id="btnReset" aria-label="リセット"><svg class="ic"><use href="#ic-reset"/></svg></button>
   </header>
 
   <main id="board">
@@ -250,7 +320,7 @@ input[type=range]{width:120px;accent-color:var(--accent);background:transparent}
     <div id="calcName">PLAYER 1</div>
     <div id="calcLife">8000</div>
     <div id="calcBuf"></div>
-    <button id="calcX" aria-label="閉じる">✕</button>
+    <button id="calcX" aria-label="閉じる"><svg class="ic"><use href="#ic-close"/></svg></button>
   </div>
   <div id="keypad">
     <button class="key" data-d="7">7</button>
@@ -317,8 +387,8 @@ input[type=range]{width:120px;accent-color:var(--accent);background:transparent}
 <div class="modal" id="mAcc" role="dialog" aria-label="アクセサリ">
   <p class="mtitle" id="accTitle">アクセサリ</p>
   <div class="accgrid" id="accMenu">
-    <button class="acccard" data-acc="coin"><span class="em">🪙</span>コイントス</button>
-    <button class="acccard" data-acc="dice"><span class="em">🎲</span>サイコロ</button>
+    <button class="acccard" data-acc="coin"><svg class="em"><use href="#ic-coin"/></svg>コイントス</button>
+    <button class="acccard" data-acc="dice"><svg class="em"><use href="#ic-dice"/></svg>サイコロ</button>
   </div>
   <div id="accStage" hidden>
     <div id="accResult">—</div>
@@ -380,7 +450,7 @@ var LONG_TRACK_SEC = 45;
 var MAX_DECODED    = 2;
 
 var LS = 'ygolife.';
-var CACHE_NAME = 'ygolife-v5';   /* sw.js の CACHE と同じ値にすること */
+var CACHE_NAME = 'ygolife-v6';   /* sw.js の CACHE と同じ値にすること */
 var $ = function(id){ return document.getElementById(id); };
 
 /* ====== state ====== */
@@ -648,14 +718,75 @@ var popEl  = {1:$('pop1'),  2:$('pop2')};
 var flEl   = {1:$('fl1'),   2:$('fl2')};
 var rolling = {1:null, 2:null};
 
+/* ---- 7セグメント表示 ----
+   外部のデジタルフォントを持ち込まずにデジタル感を出すため、
+   数字は7本のセグメントを持つSVGとして自前で描く。消灯セグメントも
+   薄く残すことで、実物のLCDカウンターらしい見た目になる。 */
+var SEG_ON = { '0':'abcdef','1':'bc','2':'abged','3':'abgcd','4':'fgbc',
+               '5':'afgcd','6':'afgecd','7':'abc','8':'abcdefg','9':'abcdfg' };
+var SEG_RECT = { a:[14,6,32,8],  b:[46,16,8,28], c:[46,56,8,28], d:[14,86,32,8],
+                 e:[6,56,8,28],  f:[6,16,8,28],  g:[14,46,32,8] };
+var SVGNS = 'http://www.w3.org/2000/svg';
+
+function makeDigit(){
+  var svg = document.createElementNS(SVGNS,'svg');
+  svg.setAttribute('viewBox','0 0 60 100');
+  svg.setAttribute('class','dg');
+  var segs = {};
+  for(var k in SEG_RECT){
+    var v = SEG_RECT[k], r = document.createElementNS(SVGNS,'rect');
+    r.setAttribute('x',v[0]); r.setAttribute('y',v[1]);
+    r.setAttribute('width',v[2]); r.setAttribute('height',v[3]);
+    r.setAttribute('rx','3'); r.setAttribute('class','sg');
+    svg.appendChild(r); segs[k] = r;
+  }
+  return { el:svg, segs:segs, ch:null };
+}
+
+/* host に count 桁ぶんの表示を作り、set(値) で更新できるようにして返す */
+function makeDisplay(host, count){
+  host.innerHTML = '';
+  var digits = [];
+  for(var i = 0; i < count; i++){
+    var d = makeDigit();
+    host.appendChild(d.el);
+    digits.push(d);
+  }
+  return {
+    host: host,
+    count: count,
+    set: function(v){
+      var s = String(v), pad = digits.length - s.length;
+      for(var i = 0; i < digits.length; i++){
+        /* 桁が足りない先頭は消灯のまま（実機のLCDと同じ） */
+        var ch = i < pad ? '' : s.charAt(i - pad);
+        var d = digits[i];
+        if(d.ch === ch) continue;
+        d.ch = ch;
+        var on = SEG_ON[ch] || '';
+        for(var k in d.segs){ d.segs[k].classList.toggle('on', on.indexOf(k) >= 0); }
+      }
+    }
+  };
+}
+
+var disp = {};                       /* 1 / 2 / calc の表示 */
+function buildDisplays(){
+  var n = Math.max(4, String(S.initialLife).length);
+  disp[1] = makeDisplay(lifeEl[1], n);
+  disp[2] = makeDisplay(lifeEl[2], n);
+  disp.calc = makeDisplay($('calcLife'), n);
+}
+
 function renderNames(){
   document.querySelectorAll('.pname').forEach(function(b){
     b.textContent = S.names[b.dataset.name];
   });
 }
 function setLifeText(p, v){
-  lifeEl[p].textContent = v;
-  lifeEl[p].classList.toggle('z', v===0);
+  disp[p].set(v);
+  lifeEl[p].classList.toggle('z', v === 0);
+  lifeEl[p].classList.toggle('low', v <= 1999);
 }
 function renderBands(){
   [1,2].forEach(function(p){
@@ -672,9 +803,9 @@ function renderAll(){
 
 /* number roll */
 function roll(p, from, to, dur){
-  var el = lifeEl[p];
   if(rolling[p]){ cancelAnimationFrame(rolling[p]); rolling[p]=null; }
-  if(from===to){ setLifeText(p,to); return; }
+  /* 非表示のタブでは rAF が止まるので、途中の値で固まらないよう即座に確定させる */
+  if(from===to || document.hidden){ setLifeText(p,to); return; }
   var t0 = performance.now();
   function step(now){
     var t = Math.min(1, (now-t0)/dur);
@@ -703,7 +834,8 @@ function animateChange(p, before, after, delta, quiet){
   pop.className = 'pop ' + (delta<0 ? 'dmg':'heal');
   pop.textContent = (delta<0?'−':'+') + mag;
   popEl[p].appendChild(pop);
-  pop.addEventListener('animationend', function(){ pop.remove(); });
+  /* animationend は非表示タブだと発火しないので、時間でも必ず後片付けする */
+  setTimeout(function(){ pop.remove(); }, 1000);
 
   var f = flEl[p];
   f.classList.remove('fd','fh'); void f.offsetWidth;
@@ -713,9 +845,19 @@ function animateChange(p, before, after, delta, quiet){
     var el = lifeEl[p], cls = 'sh'+lvl;
     el.classList.remove('sh1','sh2','sh3'); void el.offsetWidth;
     el.classList.add(cls);
-    el.addEventListener('animationend', function h(){ el.classList.remove(cls); el.removeEventListener('animationend',h); });
+    setTimeout(function(){ el.classList.remove(cls); }, 420);
     if(navigator.vibrate) { try{ navigator.vibrate(lvl===3?[30,40,60]:(lvl===2?[24,30]:14)); }catch(e){} }
   }
+}
+
+/* アプリを切り替えて戻ってきた時、表示を確実に現在値へ合わせる */
+function snapDisplays(){
+  [1,2].forEach(function(p){
+    if(rolling[p]){ cancelAnimationFrame(rolling[p]); rolling[p]=null; }
+    lifeEl[p].classList.remove('sh1','sh2','sh3');
+    setLifeText(p, S.life[p]);
+  });
+  renderBands();
 }
 
 /* ====== core ops ====== */
@@ -780,7 +922,7 @@ function renderBuffer(){
 function renderCalcHead(){
   if(!S.target) return;
   $('calcName').textContent = S.names[S.target];
-  $('calcLife').textContent = S.life[S.target];
+  disp.calc.set(S.life[S.target]);
   renderBuffer();
 }
 function openCalc(p){
@@ -891,7 +1033,12 @@ function applySettings(){
   var v = parseInt($('setLife').value,10);
   if(isNaN(v) || v<1) v = 1; if(v>99999) v = 99999;
   var changed = (v !== S.initialLife);
+  var digitsChanged = String(v).length !== String(S.initialLife).length;
   S.initialLife = v;
+  if(digitsChanged){                       /* 桁数が変わったら表示を作り直す */
+    buildDisplays();
+    setLifeText(1, S.life[1]); setLifeText(2, S.life[2]);
+  }
   S.names[1] = ($('setN1').value||'PLAYER 1').trim() || 'PLAYER 1';
   S.names[2] = ($('setN2').value||'PLAYER 2').trim() || 'PLAYER 2';
   S.set.bgmVol = parseInt($('setBgmVol').value,10)/100;
@@ -925,7 +1072,7 @@ function accEnter(mode){
   $('accStage').hidden = false;
   $('accBack').hidden = false; $('accRoll').hidden = false;
   $('accRoll').textContent = mode==='coin' ? 'トスする' : '振る';
-  $('accResult').textContent = mode==='coin' ? '🪙' : '🎲';
+  $('accResult').textContent = '—';
   $('accLabel').textContent = '';
   renderAccHist();
 }
@@ -977,7 +1124,7 @@ function requestWake(){
 }
 function releaseWake(){ if(wakeRef){ try{ wakeRef.release(); }catch(e){} wakeRef=null; } }
 document.addEventListener('visibilitychange', function(){
-  if(document.visibilityState==='visible'){ requestWake(); }
+  if(document.visibilityState==='visible'){ requestWake(); snapDisplays(); }
 });
 
 /* ====== events ====== */
@@ -1072,7 +1219,9 @@ $('btnMute').addEventListener('click', function(){
   save(); updateMuteIcon(); Audio_.refreshVolume();
 });
 function updateMuteIcon(){
-  $('btnMute').querySelector('.ic').textContent = (S.set.bgm||S.set.se) ? '🔊' : '🔇';
+  var on = S.set.bgm || S.set.se;
+  $('icMute').querySelector('use').setAttribute('href', on ? '#ic-sound-on' : '#ic-sound-off');
+  $('btnMute').style.color = on ? '' : 'var(--warn)';
 }
 
 /* settings widgets */
@@ -1126,6 +1275,7 @@ document.addEventListener('keydown', function(e){
 
 /* ====== boot ====== */
 load();
+buildDisplays();
 renderAll();
 updateMuteIcon();
 Audio_.cur = bandOf(S.life[1],S.life[2]) - 1;
