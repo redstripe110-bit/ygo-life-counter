@@ -349,13 +349,12 @@ input[type=range]{width:120px;accent-color:var(--accent);background:transparent}
 /* ====== 音源ファイル ======
    各トラックは「先に見つかった方」を使う。同梱の .m4a より、
    自分で置いた .mp3 が優先される（差し替えたいだけなら mp3 を置くだけでよい）。 */
-function src(name){ return ['assets/audio/'+name+'.mp3', 'assets/audio/'+name+'.m4a']; }
-var AUDIO = {
-  bgm:[src('bgm1'), src('bgm2'), src('bgm3'), src('bgm4')],
-  damage:src('damage'),
-  coin:src('coin'),
-  dice:src('dice')
-};
+function srcOf(name){ return ['assets/audio/'+name+'.mp3', 'assets/audio/'+name+'.m4a']; }
+var TRACKS = ['bgm1','bgm2','bgm3','bgm4','damage','coin','dice'];
+
+/* 同梱 .m4a の正確な尺（秒）。AACは先頭に無音パディングが入るので、
+   ここを基準にループ終端をサンプル単位で決める。mp3を自分で置いた場合は使わない。 */
+var LOOP_SEC = { bgm1:25.945941, bgm2:24.615374, bgm3:22.857143, bgm4:21.098889 };
 
 var LS = 'ygolife.';
 var $ = function(id){ return document.getElementById(id); };
@@ -396,80 +395,135 @@ function load(){
 }
 
 /* ====== audio engine ====== */
+/* Web Audio で再生する。<audio loop> はループ位置がサンプル単位で正確でなく
+   継ぎ目に隙間ができるため、AudioBufferSourceNode の loop を使う。       */
 var Audio_ = {
-  unlocked:false, cur:0, els:[], se:{}, fade:null,
+  ctx:null, bufs:{}, bgmBus:null, seBus:null,
+  cur:0, unlocked:false, active:null, lastSe:null, loaded:0,
+
   init:function(){
-    var self=this;
-    AUDIO.bgm.forEach(function(src,i){ self.els[i] = self.make(src,true); });
-    ['damage','coin','dice'].forEach(function(k){ self.se[k] = self.make(AUDIO[k],false); });
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC){ $('audioHint').textContent = '⚠ この端末では音が出せません'; return; }
+    if(location.protocol === 'file:'){
+      $('audioHint').textContent = '⚠ file:// では音が鳴りません';
+      return;   /* fetch が使えないため読み込み自体ができない */
+    }
+    this.ctx = new AC();
+    this.bgmBus = this.ctx.createGain(); this.bgmBus.gain.value = S.set.bgmVol;
+    this.seBus  = this.ctx.createGain(); this.seBus.gain.value  = S.set.seVol;
+    this.bgmBus.connect(this.ctx.destination);
+    this.seBus.connect(this.ctx.destination);
+    var self = this;
+    TRACKS.forEach(function(name){ self.load(name); });
   },
-  /* 候補を順に試し、全部だめなら ok=0（＝その音は鳴らさない） */
-  make:function(list,loop){
-    var a = new Audio(), i = 0;
-    a.preload='auto'; a.loop=!!loop; a.dataset.ok='1';
-    a.addEventListener('error', function(){
-      i++;
-      if(i < list.length){ a.src = list[i]; a.load(); }
-      else { a.dataset.ok='0'; }
-    });
-    a.src = list[0];
-    return a;
+
+  /* .mp3 → .m4a の順に取りに行き、最初に見つかった方をデコードする */
+  load:function(name){
+    var self = this, list = srcOf(name), i = 0;
+    (function next(){
+      if(i >= list.length) return;           /* どちらも無い＝その音は鳴らさない */
+      var url = list[i++];
+      fetch(url).then(function(r){
+        if(!r.ok) throw new Error('404');
+        return r.arrayBuffer();
+      }).then(function(ab){
+        self.ctx.decodeAudioData(ab, function(b){
+          self.bufs[name] = self.points(b, name, url);
+          self.loaded++;
+          /* 読み込み完了時点で鳴らすべきBGMがまだ鳴っていなければ開始する */
+          if(self.unlocked && S.set.bgm && !self.active && name === 'bgm'+(self.cur+1)){
+            self.applyBgm(self.cur+1, true);
+          }
+        }, function(){});
+      }).catch(next);
+    })();
   },
-  ok:function(a){ return a && a.dataset.ok!=='0'; },
+
+  /* ループ区間を決める。AACは先頭に無音パディングが入るのでそれを飛ばし、
+     同梱音源なら既知の正確な尺で終端を決める（＝サンプル単位でシームレス）。 */
+  points:function(b, name, url){
+    var ch = b.getChannelData(0), sr = b.sampleRate, i;
+    var start = 0, lim = Math.min(ch.length, Math.floor(sr * 0.2));
+    for(i = 0; i < lim; i++){ if(Math.abs(ch[i]) > 0.003){ start = i; break; } }
+    var s = start / sr, e;
+    if(/\.m4a$/.test(url) && LOOP_SEC[name]){
+      e = Math.min(b.duration, s + LOOP_SEC[name]);      /* 同梱音源：正確な尺 */
+    } else {
+      var last = ch.length - 1;                          /* 差し替え音源：末尾の無音を削る */
+      while(last > start && Math.abs(ch[last]) < 0.003) last--;
+      e = (last + 1) / sr;
+    }
+    return { buffer:b, start:s, end:e };
+  },
+
   unlock:function(){
     if(this.unlocked) return;
     this.unlocked = true;
     $('audioHint').hidden = true;
-    this.applyBgm(bandOf(S.life[1],S.life[2]), true);
+    if(this.ctx && this.ctx.state === 'suspended'){ this.ctx.resume().catch(function(){}); }
+    this.applyBgm(this.cur + 1, true);
     requestWake();
   },
+
   playSe:function(k){
-    if(!S.set.se) return;
-    var a = this.se[k];
-    if(!this.ok(a)) return;
-    try{ a.pause(); a.currentTime = 0; a.volume = S.set.seVol; a.play().catch(function(){}); }catch(e){}
+    if(!S.set.se || !this.ctx || !this.unlocked) return;
+    var b = this.bufs[k];
+    if(!b) return;
+    if(this.lastSe){ try{ this.lastSe.stop(); }catch(e){} }   /* 連打時は多重再生しない */
+    var src = this.ctx.createBufferSource();
+    src.buffer = b.buffer;
+    src.connect(this.seBus);
+    try{ src.start(0, b.start); }catch(e){ return; }
+    this.lastSe = src;
   },
-  /* band: 1..4 -> index 0..3 */
-  applyBgm:function(band, immediate){
-    var idx = band-1;
-    if(!this.unlocked || !S.set.bgm){ this.cur = idx; if(!S.set.bgm) this.stopAll(); return; }
-    if(this.cur === idx && !immediate){ this.ensurePlaying(idx); return; }
-    var from = this.els[this.cur], to = this.els[idx];
+
+  /* band: 1..4 */
+  applyBgm:function(band){
+    var idx = band - 1;
     this.cur = idx;
-    if(this.fade){ clearInterval(this.fade); this.fade=null; }
-    var vol = S.set.bgm ? S.set.bgmVol : 0;
-    if(from && from!==to && this.ok(from)){ /* fade out below */ }
-    if(this.ok(to)){
-      try{ to.volume = 0; if(to.paused) to.play().catch(function(){}); }catch(e){}
-    }
-    var steps=10, i=0, self=this, startFrom = (from && from!==to && this.ok(from)) ? from.volume : 0;
-    this.fade = setInterval(function(){
-      i++;
-      var p = i/steps;
-      if(from && from!==to && self.ok(from)){ try{ from.volume = Math.max(0, startFrom*(1-p)); }catch(e){} }
-      if(self.ok(to)){ try{ to.volume = Math.min(1, vol*p); }catch(e){} }
-      if(i>=steps){
-        clearInterval(self.fade); self.fade=null;
-        if(from && from!==to){ try{ from.pause(); from.currentTime=0; }catch(e){} }
-        if(self.ok(to)){ try{ to.volume = vol; }catch(e){} }
-        if(!S.set.bgm && self.ok(to)){ try{ to.pause(); }catch(e){} }
-      }
-    },30);
+    if(!this.ctx || !this.unlocked) return;
+    if(!S.set.bgm){ this.stopAll(); return; }
+    if(this.active && this.active.idx === idx) return;      /* 同じBGMなら再生位置を維持 */
+    var old = this.active;
+    this.active = this.start(idx);
+    if(old) this.fadeOut(old, 0.3);
   },
-  ensurePlaying:function(idx){
-    var a = this.els[idx];
-    if(!this.ok(a)) return;
-    if(S.set.bgm){ try{ a.volume=S.set.bgmVol; if(a.paused) a.play().catch(function(){}); }catch(e){} }
-    else { try{ a.pause(); }catch(e){} }
+
+  start:function(idx){
+    var b = this.bufs['bgm' + (idx+1)];
+    if(!b) return null;
+    var src = this.ctx.createBufferSource();
+    src.buffer = b.buffer;
+    src.loop = true; src.loopStart = b.start; src.loopEnd = b.end;
+    var g = this.ctx.createGain(), now = this.ctx.currentTime;
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(1, now + 0.3);
+    src.connect(g); g.connect(this.bgmBus);
+    try{ src.start(0, b.start); }catch(e){ return null; }
+    return { src:src, g:g, idx:idx };
   },
+
+  fadeOut:function(t, sec){
+    var now = this.ctx.currentTime;
+    try{
+      t.g.gain.cancelScheduledValues(now);
+      t.g.gain.setValueAtTime(t.g.gain.value, now);
+      t.g.gain.linearRampToValueAtTime(0, now + sec);
+      t.src.stop(now + sec + 0.05);
+    }catch(e){}
+  },
+
   refreshVolume:function(){
-    var a = this.els[this.cur];
-    if(!this.unlocked) return;
-    this.ensurePlaying(this.cur);
-    if(this.ok(a) && S.set.bgm){ try{ a.volume = S.set.bgmVol; }catch(e){} }
+    if(!this.ctx) return;
+    this.bgmBus.gain.value = S.set.bgmVol;
+    this.seBus.gain.value  = S.set.seVol;
+    if(!S.set.bgm){ this.stopAll(); }
+    else if(this.unlocked && !this.active){ this.applyBgm(this.cur + 1); }
   },
+
   stopAll:function(){
-    this.els.forEach(function(a){ try{ a.pause(); a.currentTime=0; }catch(e){} });
+    if(this.active){ this.fadeOut(this.active, 0.12); this.active = null; }
+    if(this.lastSe){ try{ this.lastSe.stop(); }catch(e){} this.lastSe = null; }
   }
 };
 
@@ -968,8 +1022,8 @@ document.addEventListener('keydown', function(e){
 load();
 renderAll();
 updateMuteIcon();
-Audio_.init();
 Audio_.cur = bandOf(S.life[1],S.life[2]) - 1;
+Audio_.init();
 
 /* 動作確認・デバッグ用の読み取り口（コンソールから状態を覗ける） */
 window.__ygo = { S:S, bandOf:bandOf, audio:Audio_,
