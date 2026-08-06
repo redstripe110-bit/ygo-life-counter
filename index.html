@@ -380,6 +380,7 @@ var LONG_TRACK_SEC = 45;
 var MAX_DECODED    = 2;
 
 var LS = 'ygolife.';
+var CACHE_NAME = 'ygolife-v5';   /* sw.js の CACHE と同じ値にすること */
 var $ = function(id){ return document.getElementById(id); };
 
 /* ====== state ====== */
@@ -457,6 +458,7 @@ var Audio_ = {
       }).then(function(ab){
         self.raw[name] = { bytes:ab, url:url };
         self.loaded++;
+        self.cacheForOffline(url, ab);
         var isBgm = name.indexOf('bgm') === 0;
         /* 160kbps 前後を仮定した概算。長尺かどうかの判断にだけ使う */
         var estSec = ab.byteLength * 8 / 160000;
@@ -464,6 +466,18 @@ var Audio_ = {
         if(!isBgm || name === 'bgm' + (self.cur + 1) || self.eager) self.decode(name);
       }).catch(next);
     })();
+  },
+
+  /* 初回訪問では Service Worker がまだ制御していないため、ここでの取得が
+     キャッシュに残らない。取り直しにならないよう自分で入れておく。
+     （CACHE_NAME は sw.js の CACHE と揃えること） */
+  cacheForOffline:function(url, ab){
+    if(!window.caches) return;
+    caches.open(CACHE_NAME).then(function(c){
+      c.match(url).then(function(hit){
+        if(!hit) c.put(url, new Response(ab.slice(0))).catch(function(){});
+      });
+    }).catch(function(){});
   },
 
   /* 必要になった時にデコードする。done(buf) は成功時のみ呼ばれる。 */
