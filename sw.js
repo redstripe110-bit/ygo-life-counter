@@ -1,11 +1,18 @@
 /* シンプルなオフラインキャッシュ。中身を更新したら CACHE の数字を上げること */
-var CACHE = 'ygolife-v1';
+var CACHE = 'ygolife-v2';
 var SHELL = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './assets/audio/bgm1.m4a',
+  './assets/audio/bgm2.m4a',
+  './assets/audio/bgm3.m4a',
+  './assets/audio/bgm4.m4a',
+  './assets/audio/damage.m4a',
+  './assets/audio/coin.m4a',
+  './assets/audio/dice.m4a'
 ];
 
 self.addEventListener('install', function(e){
