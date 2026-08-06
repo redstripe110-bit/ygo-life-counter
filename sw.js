@@ -1,5 +1,5 @@
 /* シンプルなオフラインキャッシュ。中身を更新したら CACHE の数字を上げること */
-var CACHE = 'ygolife-v3';
+var CACHE = 'ygolife-v4';
 var SHELL = [
   './',
   './index.html',
