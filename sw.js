@@ -1,5 +1,9 @@
 /* シンプルなオフラインキャッシュ。中身を更新したら CACHE の数字を上げること */
-var CACHE = 'ygolife-v4';
+var CACHE = 'ygolife-v5';
+
+/* インストール時に先読みするのは、アプリ本体と軽い音（効果音＋最初のBGM）だけ。
+   残りのBGMは初回再生時にキャッシュされる。音源を長い曲に差し替えても
+   インストールが重くならないようにするため。 */
 var SHELL = [
   './',
   './index.html',
@@ -7,9 +11,6 @@ var SHELL = [
   './icon-192.png',
   './icon-512.png',
   './assets/audio/bgm1.m4a',
-  './assets/audio/bgm2.m4a',
-  './assets/audio/bgm3.m4a',
-  './assets/audio/bgm4.m4a',
   './assets/audio/damage.m4a',
   './assets/audio/coin.m4a',
   './assets/audio/dice.m4a'
