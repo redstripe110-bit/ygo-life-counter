@@ -1,5 +1,5 @@
 /* シンプルなオフラインキャッシュ。中身を更新したら CACHE の数字を上げること */
-var CACHE = 'ygolife-v8';   /* index.html の CACHE_NAME と同じ値にすること */
+var CACHE = 'ygolife-v9';   /* index.html の CACHE_NAME と同じ値にすること */
 
 /* インストール時に先読みするのは、アプリ本体と軽い効果音だけ。
    BGMはアプリ側が取得したものを自分でキャッシュに入れる（index.html の

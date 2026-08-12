@@ -437,13 +437,14 @@ function srcOf(name){
    例）イントロ4秒＋ループ本体92秒、少し音が大きいので下げる場合：
        bgm1:{ forExt:'*', loopStart:4.0, loopEnd:96.0, gain:0.8 } */
 var AUDIO_CFG = {
-  /* BGM1：持ち込みの Crescendo_Jitter_loop.mp3（97.7秒ちょうどのループ）。
-     元が大きめのマスタリング（RMS 0.39・ピーク1.19）で他のBGMの約2倍あるため、
-     既存3曲の平均（RMS 0.19）に合わせて gain を下げている。 */
-  bgm1:{ forExt:'mp3', loopStart:0, loopEnd:97.7, gain:0.49 },
+  /* BGM1・BGM2：合成した仮音源（.m4a）。末尾に0.5秒のループ余白がある */
+  bgm1:{ forExt:'m4a', loopStart:0, loopEnd:25.945941 },
   bgm2:{ forExt:'m4a', loopStart:0, loopEnd:24.615374 },
-  bgm3:{ forExt:'m4a', loopStart:0, loopEnd:22.857143 },
-  bgm4:{ forExt:'m4a', loopStart:0, loopEnd:21.098889 }
+  /* BGM3・BGM4：持ち込みのmp3。どちらも元のマスタリングが大きく
+     （RMS 0.39 / 0.42、ピーク 1.19 / 1.14 でクリップ）仮音源の約2倍あるため、
+     仮音源の平均 RMS 0.19 に揃うよう gain を下げている */
+  bgm3:{ forExt:'mp3', loopStart:0, loopEnd:97.700000, gain:0.49 },
+  bgm4:{ forExt:'mp3', loopStart:0, loopEnd:94.462063, gain:0.45 }
 };
 
 /* デコード済みバッファはfloat32なので、長い曲だとメモリを食う
@@ -453,7 +454,7 @@ var LONG_TRACK_SEC = 45;
 var MAX_DECODED    = 2;
 
 var LS = 'ygolife.';
-var CACHE_NAME = 'ygolife-v8';   /* sw.js の CACHE と同じ値にすること */
+var CACHE_NAME = 'ygolife-v9';   /* sw.js の CACHE と同じ値にすること */
 var $ = function(id){ return document.getElementById(id); };
 
 /* ====== state ====== */
