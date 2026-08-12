@@ -1,16 +1,15 @@
 /* シンプルなオフラインキャッシュ。中身を更新したら CACHE の数字を上げること */
-var CACHE = 'ygolife-v6';   /* index.html の CACHE_NAME と同じ値にすること */
+var CACHE = 'ygolife-v7';   /* index.html の CACHE_NAME と同じ値にすること */
 
-/* インストール時に先読みするのは、アプリ本体と軽い音（効果音＋最初のBGM）だけ。
-   残りのBGMは初回再生時にキャッシュされる。音源を長い曲に差し替えても
-   インストールが重くならないようにするため。 */
+/* インストール時に先読みするのは、アプリ本体と軽い効果音だけ。
+   BGMはアプリ側が取得したものを自分でキャッシュに入れる（index.html の
+   cacheForOffline）ので、長い曲に差し替えてもインストールが重くならない。 */
 var SHELL = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  './assets/audio/bgm1.m4a',
   './assets/audio/damage.m4a',
   './assets/audio/coin.m4a',
   './assets/audio/dice.m4a'
