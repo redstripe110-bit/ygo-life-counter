@@ -1,5 +1,5 @@
 /* シンプルなオフラインキャッシュ。中身を更新したら CACHE の数字を上げること */
-var CACHE = 'ygolife-v7';   /* index.html の CACHE_NAME と同じ値にすること */
+var CACHE = 'ygolife-v8';   /* index.html の CACHE_NAME と同じ値にすること */
 
 /* インストール時に先読みするのは、アプリ本体と軽い効果音だけ。
    BGMはアプリ側が取得したものを自分でキャッシュに入れる（index.html の
@@ -59,20 +59,25 @@ self.addEventListener('fetch', function(e){
     return;
   }
 
-  /* それ以外（音源・アイコン等）はキャッシュ優先＋取得できたら保存
+  /* それ以外（音源・アイコン等）はキャッシュを即返しつつ、裏で更新を確認する。
+     条件付きGET（cache:'no-cache'）なので中身が変わっていなければ304が返り、
+     通信量はほぼゼロ。変わっていればキャッシュを差し替え、次回の起動から反映される。
+     これが無いと、同じファイル名で音源を差し替えても古いほうが鳴り続ける。
      （音源が無い場合は 404 がそのまま返り、アプリ側で無音扱いになる） */
   e.respondWith(
     caches.match(e.request).then(function(hit){
-      if(hit) return hit;
-      return fetch(e.request).then(function(res){
-        if(res && res.status === 200 && res.type === 'basic'){
+      var fresh = fetch(e.request.url, { cache:'no-cache' }).then(function(res){
+        if(res && res.status === 200){
           var copy = res.clone();
           caches.open(CACHE).then(function(c){ c.put(e.request, copy); });
         }
         return res;
-      }).catch(function(){
-        return caches.match('./index.html');
       });
+      if(hit){
+        fresh.catch(function(){});        /* オフラインなら黙って諦める */
+        return hit;                       /* 表示・再生はキャッシュから即座に */
+      }
+      return fresh.catch(function(){ return caches.match('./index.html'); });
     })
   );
 });
