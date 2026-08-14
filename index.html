@@ -422,8 +422,15 @@ input[type=range]{width:120px;accent-color:var(--accent);background:transparent}
 var AUDIO_EXT = ['mp3','m4a','ogg','wav'];
 var TRACKS = ['bgm1','bgm2','bgm3','bgm4','damage','coin','dice','buzzer'];
 
+/* 音源を差し替えたらこの数字を上げること。URLに ?v= として付くので、
+   同じファイル名で中身を変えても「別のURL」になり、古いキャッシュを絶対に掴まない。
+   （これが無いと Service Worker と HTTPキャッシュのせいで反映が1〜2回遅れる） */
+var AUDIO_VER = 11;
+
 function srcOf(name){
-  return AUDIO_EXT.map(function(e){ return 'assets/audio/'+name+'.'+e; });
+  return AUDIO_EXT.map(function(e){
+    return 'assets/audio/'+name+'.'+e+'?v='+AUDIO_VER;
+  });
 }
 
 /* ====== トラック設定 ======
@@ -451,7 +458,7 @@ var LONG_TRACK_SEC = 45;
 var MAX_DECODED    = 2;
 
 var LS = 'ygolife.';
-var CACHE_NAME = 'ygolife-v10';   /* sw.js の CACHE と同じ値にすること */
+var CACHE_NAME = 'ygolife-v11';   /* sw.js の CACHE と同じ値にすること */
 var $ = function(id){ return document.getElementById(id); };
 
 /* ====== state ====== */
@@ -544,9 +551,18 @@ var Audio_ = {
      （CACHE_NAME は sw.js の CACHE と揃えること） */
   cacheForOffline:function(url, ab){
     if(!window.caches) return;
+    var abs  = new URL(url, location.href).href;
+    var base = abs.split('?')[0].replace(/\.[a-z0-9]+$/i, '');   /* 拡張子とクエリを外した名前 */
     caches.open(CACHE_NAME).then(function(c){
       c.match(url).then(function(hit){
         if(!hit) c.put(url, new Response(ab.slice(0))).catch(function(){});
+      });
+      /* 同じ音源の古いバージョン（?v= 違い・拡張子違い）は消しておく。
+         AUDIO_VER を上げるたびに使わないデータが溜まらないようにするため */
+      c.keys().then(function(reqs){
+        reqs.forEach(function(r){
+          if(r.url !== abs && r.url.indexOf(base + '.') === 0) c.delete(r);
+        });
       });
     }).catch(function(){});
   },
@@ -600,7 +616,7 @@ var Audio_ = {
     for(i = 0; i < lim; i++){ if(Math.abs(ch[i]) > 0.003){ pad = i; break; } }
     pad /= sr;                                     /* エンコーダが入れた先頭の無音 */
 
-    var ext = (url.split('.').pop() || '').toLowerCase();
+    var ext = (url.split('?')[0].split('.').pop() || '').toLowerCase();
     var cfg = AUDIO_CFG[name];
     var s, e;
     if(cfg && (cfg.forExt === '*' || cfg.forExt === ext)){
