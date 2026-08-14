@@ -1,5 +1,5 @@
 /* シンプルなオフラインキャッシュ。中身を更新したら CACHE の数字を上げること */
-var CACHE = 'ygolife-v11';   /* index.html の CACHE_NAME と同じ値にすること */
+var CACHE = 'ygolife-v12';   /* index.html の CACHE_NAME と同じ値にすること */
 
 /* 先読みするのはアプリ本体だけ。音源はアプリ側が ?v=バージョン付きのURLで取得し、
    そのまま自分でキャッシュに入れる（index.html の cacheForOffline）。
@@ -39,11 +39,13 @@ self.addEventListener('fetch', function(e){
   var url = new URL(e.request.url);
   if(url.origin !== location.origin) return;
 
-  /* HTML はネットワーク優先（更新をすぐ反映）、オフライン時のみキャッシュ */
+  /* HTML はネットワーク優先（更新をすぐ反映）、オフライン時のみキャッシュ。
+     GitHub Pages は max-age=600 を返すため、no-cache を付けて条件付きGETにしないと
+     デプロイ後10分間は古いHTMLがブラウザのキャッシュから返ってしまう。 */
   var isDoc = e.request.mode === 'navigate' || e.request.destination === 'document';
   if(isDoc){
     e.respondWith(
-      fetch(e.request).then(function(res){
+      fetch(e.request, { cache:'no-cache' }).then(function(res){
         var copy = res.clone();
         caches.open(CACHE).then(function(c){ c.put(e.request, copy); });
         return res;
