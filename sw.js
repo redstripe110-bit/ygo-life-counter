@@ -1,5 +1,5 @@
 /* シンプルなオフラインキャッシュ。中身を更新したら CACHE の数字を上げること */
-var CACHE = 'ygolife-v9';   /* index.html の CACHE_NAME と同じ値にすること */
+var CACHE = 'ygolife-v10';   /* index.html の CACHE_NAME と同じ値にすること */
 
 /* インストール時に先読みするのは、アプリ本体と軽い効果音だけ。
    BGMはアプリ側が取得したものを自分でキャッシュに入れる（index.html の
@@ -12,7 +12,8 @@ var SHELL = [
   './icon-512.png',
   './assets/audio/damage.m4a',
   './assets/audio/coin.m4a',
-  './assets/audio/dice.m4a'
+  './assets/audio/dice.m4a',
+  './assets/audio/buzzer.m4a'
 ];
 
 self.addEventListener('install', function(e){

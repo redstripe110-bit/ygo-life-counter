@@ -555,6 +555,29 @@ def coin():
     lowpass(L, 13000); lowpass(R, 13000); finalize(L, R, 0.88)
     return L, R
 
+def buzzer():
+    """ライフ0の「ビーーー」。矩形波を軽くデチューンして重ね、
+       最後だけピッチを落として切る。耳に刺さらないよう高域は削る。"""
+    n = int(SR * 2.2)
+    a, b = mono(n), mono(n)
+    hold = 1.85
+    for dst, det in ((a, -5), (b, +5)):
+        tone(dst, 0.0, hold, cents(220, det), 'square', 0.30, duty=0.5,
+             a=0.006, d=0.10, s=0.95, r=0.30)              # 芯
+        tone(dst, 0.0, hold, cents(440, det), 'square', 0.10, duty=0.32,
+             a=0.006, d=0.10, s=0.90, r=0.30)              # 上のオクターブで鋭さ
+        tone(dst, 0.0, hold, cents(110, det), 'square', 0.14, duty=0.5,
+             a=0.008, d=0.12, s=0.90, r=0.30)              # 下で厚み
+        tone(dst, hold - 0.05, 0.28, 0, 'square', 0.24, duty=0.5,
+             a=0.004, d=0.05, s=0.8, r=0.22, glide=(220, 150))   # 語尾を落として終わる
+    L, R = mono(n), mono(n)
+    mix_into(L, R, a, 1.0, -0.18)
+    mix_into(L, R, b, 1.0, 0.18)
+    mix_into(L, R, room(a), 0.10, 0.5)
+    lowpass(L, 5200); lowpass(R, 5200)
+    finalize(L, R, 0.92)
+    return L, R
+
 def dice():
     n = int(SR * 1.1)
     a, b = mono(n), mono(n)
